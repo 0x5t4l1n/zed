@@ -151,7 +151,7 @@ impl TableView {
                 .schema
                 .fields
                 .iter()
-                .map(|field| field.name.clone())
+                .map(|field| MarkdownEscaped(&field.name).to_string())
                 .collect::<Vec<_>>()
                 .join(" | ")
         );
@@ -286,5 +286,37 @@ impl OutputContent for TableView {
 
     fn has_clipboard_content(&self, _window: &Window, _cx: &App) -> bool {
         true
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn test_clipboard_content_escapes_table_cells() {
+        let table: TabularDataResource = serde_json::from_value(json!({
+            "schema": {
+                "fields": [
+                    {"name": "name | alias", "type": "string"},
+                    {"name": "**value**", "type": "string"}
+                ]
+            },
+            "data": [
+                {"name | alias": "left | right", "**value**": "*literal*"},
+                {"name | alias": r"left \| right", "**value**": "<tag>"}
+            ]
+        }))
+        .expect("valid tabular data");
+
+        assert_eq!(
+            TableView::create_clipboard_content(&table),
+            r"| name \| alias | \*\*value\*\* |
+|---|---|
+| left \| right | \*literal\* |
+| left \\\| right | &lt;tag&gt; |
+"
+        );
     }
 }
