@@ -92,6 +92,7 @@ impl Display for MarkdownString {
 /// * `^` for superscripts
 /// * `$` for inline math
 /// * `~` for strikethrough
+/// * `|` for table cell delimiters
 ///
 /// Escape of some characters is unnecessary, because while they are involved in markdown syntax,
 /// the other characters involved are escaped:
@@ -125,7 +126,7 @@ impl Display for MarkdownEscaped<'_> {
         for (ix, c) in self.0.char_indices() {
             match c {
                 // Always escaped.
-                '\\' | '`' | '*' | '_' | '[' | '^' | '$' | '~' | '&' |
+                '\\' | '`' | '*' | '_' | '[' | '^' | '$' | '~' | '&' | '|' |
                 // TODO: these only need to be escaped when they are the first non-whitespace
                 // character of the line of a block. There should probably be both an `escape_block`
                 // which does this and an `escape_inline` method which does not escape these.
@@ -309,6 +310,15 @@ mod tests {
         "#;
 
         assert_eq!(MarkdownEscaped(input).to_string(), expected);
+    }
+
+    #[test]
+    fn test_markdown_escaped_table_cells() {
+        assert_eq!(MarkdownEscaped("left | right").to_string(), r"left \| right");
+        assert_eq!(
+            MarkdownEscaped(r"left \| right").to_string(),
+            r"left \\\| right"
+        );
     }
 
     #[test]
